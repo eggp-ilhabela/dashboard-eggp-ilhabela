@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Indicadores de Capacitações e Desenvolvimento - Escola de Governo Ilhabela</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- PapaParse -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #eef2f6; }
+    .bg-sidebar { background-color: #0b1e36; }
+    .bg-sidebar-card { background-color: #132e4f; }
+    
+    /* Scrollbars personalizadas */
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    canvas { cursor: pointer; }
+  </style>
+</head>
+<body class="text-slate-900 antialiased h-screen overflow-hidden flex flex-col md:flex-row">
+
+  <!-- BARRA LATERAL -->
+  <aside class="bg-sidebar w-full md:w-72 flex-shrink-0 flex flex-col justify-between p-5 text-white z-20 shadow-xl overflow-y-auto custom-scrollbar">
+    <div>
+      <!-- TÍTULO ESCOLA DE GOVERNO -->
+      <div class="mb-5 text-center">
+        <h1 class="text-xl font-black tracking-tight text-[#61e131] whitespace-nowrap uppercase">
+          ESCOLA DE GOVERNO
+        </h1>
+        <span class="block text-xs font-semibold tracking-widest text-slate-200 mt-1 uppercase">
+          E GESTÃO PÚBLICA
+        </span>
+      </div>
+
+      <!-- PAINEL DE FILTROS -->
+      <div class="space-y-4 border-t border-slate-700/60 pt-4">
+        <div>
+          <label for="filtro-ano" class="block text-xs font-semibold uppercase text-slate-300 tracking-wider mb-1.5">
+            PERÍODO SELECIONADO
+          </label>
+          <select id="filtro-ano" onchange="aoMudarFiltroAno()" class="w-full bg-sidebar-card border border-slate-600 text-white rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium">
+            <option value="TODOS">Todos os Anos</option>
+            <option value="2026" selected>2026</option>
+            <option value="2025">2025</option>
+            <option value="2024">2024</option>
+            <option value="2023">2023</option>
+            <option value="2022">2022</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="filtro-secretaria" class="block text-xs font-semibold uppercase text-slate-300 tracking-wider mb-1.5">
+            SECRETARIA
+          </label>
+          <select id="filtro-secretaria" onchange="aoMudarFiltroSecretaria()" class="w-full bg-sidebar-card border border-slate-600 text-white rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium">
+            <option value="TODOS">Todas</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="filtro-curso" class="block text-xs font-semibold uppercase text-slate-300 tracking-wider mb-1.5">
+            CURSO / CAPACITAÇÃO
+          </label>
+          <select id="filtro-curso" onchange="atualizarDashboard()" class="w-full bg-sidebar-card border border-slate-600 text-white rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium">
+            <option value="TODOS">Todos</option>
+          </select>
+        </div>
+
+        <!-- BOTÃO LIMPAR SELEÇÃO DE GRÁFICOS -->
+        <button onclick="limparFiltroGraficos()" class="w-full bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/40 font-semibold py-1.5 px-3 rounded text-xs transition-colors flex items-center justify-center gap-1.5">
+          <i data-lucide="filter-x" class="w-3.5 h-3.5"></i> Limpar Filtros de Gráficos
+        </button>
+
+        <!-- STATUS DE SINCRONIZAÇÃO -->
+        <div class="pt-2 border-t border-slate-700/50">
+          <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+            <span class="flex items-center gap-1.5">
+              <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span>Tempo Real</span>
+            </span>
+            <button onclick="carregarDadosPlanilhas()" class="text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1 transition-colors">
+              <i data-lucide="refresh-cw" class="w-3 h-3"></i> Sincronizar
+            </button>
+          </div>
+          <p id="status-atualizacao" class="text-[11px] text-slate-400 italic">Carregando dados...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- RODAPÉ OFICIAL -->
+    <div class="border-t border-slate-700/60 pt-3 mt-4">
+      <div class="bg-blue-900/80 border border-blue-700/60 rounded-lg p-2.5 text-center shadow-inner">
+        <p class="text-xs font-black tracking-wider uppercase text-white">PREFEITURA MUNICIPAL DE ILHABELA-SP</p>
+      </div>
+      <div class="mt-2 text-[10px] text-white tracking-wide font-normal text-center">
+        <p>Responsável Técnico: <span class="font-bold">ARISTEU</span> - <span class="font-bold">ADMINISTRAÇÃO</span></p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ÁREA PRINCIPAL -->
+  <main class="flex-1 flex flex-col h-full overflow-y-auto custom-scrollbar p-4 md:p-5 space-y-4">
+    
+    <!-- CABEÇALHO -->
+    <header class="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-200 pb-2">
+      <div>
+        <h2 class="text-xl md:text-2xl font-black text-slate-900 tracking-tight">INDICADORES DE CAPACITAÇÕES E DESENVOLVIMENTO</h2>
+        <p class="text-xs md:text-sm font-extrabold text-blue-900" id="subtitulo-topo">Secretaria de Administração (Geral)</p>
+      </div>
+    </header>
+
+    <!-- CARDS KPIS -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <!-- CARD 1 -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col justify-between">
+        <div class="p-4 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-black text-slate-900 uppercase tracking-wider">EVENTOS DE APRENDIZAGEM</p>
+            <h3 id="kpi-eventos" class="text-4xl font-black text-slate-900 mt-1">0</h3>
+          </div>
+          <div class="w-16 h-16 flex-shrink-0 flex items-center justify-center text-blue-900 bg-blue-50/80 rounded-2xl border border-blue-100 shadow-sm">
+            <svg class="w-10 h-10 stroke-current fill-none" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+              <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/>
+            </svg>
+          </div>
+        </div>
+        <div class="h-2 w-full bg-blue-900"></div>
+      </div>
+
+      <!-- CARD 2 -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col justify-between">
+        <div class="p-4 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-black text-slate-900 uppercase tracking-wider">TOTAL DE PARTICIPANTES</p>
+            <h3 id="kpi-participantes" class="text-4xl font-black text-slate-900 mt-1">0</h3>
+          </div>
+          <div class="w-16 h-16 flex-shrink-0 flex items-center justify-center text-emerald-600 bg-emerald-50/80 rounded-2xl border border-emerald-100 shadow-sm">
+            <svg class="w-10 h-10 stroke-current fill-none" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </div>
+        </div>
+        <div class="h-2 w-full bg-emerald-500"></div>
+      </div>
+
+      <!-- CARD 3 -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col justify-between">
+        <div class="p-4 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-black text-slate-900 uppercase tracking-wider">MÉDIA PARTICIPAÇÃO / EVENTO</p>
+            <h3 id="kpi-media-evento" class="text-4xl font-black text-slate-900 mt-1">0,00</h3>
+          </div>
+          <div class="w-16 h-16 flex-shrink-0 flex items-center justify-center text-blue-600 bg-blue-50/80 rounded-2xl border border-blue-100 shadow-sm">
+            <svg class="w-10 h-10 stroke-current fill-none" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+              <polyline points="16 11 18 13 22 9"/>
+            </svg>
+          </div>
+        </div>
+        <div class="h-2 w-full bg-blue-500"></div>
+      </div>
+
+      <!-- CARD 4 -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col justify-between">
+        <div class="p-4 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-black text-slate-900 uppercase tracking-wider">MÉDIA CAPACITAÇÃO / MÊS</p>
+            <h3 id="kpi-media-mes" class="text-4xl font-black text-slate-900 mt-1">0</h3>
+          </div>
+          <div class="w-16 h-16 flex-shrink-0 flex items-center justify-center text-slate-800 bg-slate-100/90 rounded-2xl border border-slate-200 shadow-sm">
+            <svg class="w-10 h-10 stroke-current fill-none" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+              <path d="m9 16 2 2 4-4"/>
+            </svg>
+          </div>
+        </div>
+        <div class="h-2 w-full bg-slate-900"></div>
+      </div>
+    </section>
+
+    <!-- GRÁFICOS 1 E 2 -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+      <!-- PARTICIPAÇÕES POR VÍNCULO -->
+      <div class="lg:col-span-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-2 border-b border-slate-100 pb-2">
+          <div class="flex items-center gap-2">
+            <i data-lucide="pie-chart" class="w-4 h-4 text-blue-900"></i>
+            <h4 class="text-xs font-black text-slate-900 uppercase tracking-wider">PARTICIPAÇÕES POR VÍNCULO</h4>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="filtro-ativo-vinculo" class="text-[10px] text-amber-600 font-bold italic"></span>
+            <button onclick="alternarVisualizacao('vinculo')" class="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-2 py-0.5 rounded border border-slate-300 transition-colors">Alternar Tabela</button>
+          </div>
+        </div>
+        <div id="view-chart-vinculo" class="relative h-52 flex items-center justify-center"><canvas id="chartVinculo"></canvas></div>
+        <div id="view-table-vinculo" class="relative h-52 overflow-y-auto custom-scrollbar hidden">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-100 text-slate-700 sticky top-0">
+              <tr><th class="p-2">Vínculo</th><th class="p-2 text-right">Participantes</th><th class="p-2 text-right">%</th></tr>
+            </thead>
+            <tbody id="tbody-vinculo" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- DESCRITIVO DOS EVENTOS -->
+      <div class="lg:col-span-8 bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-2 border-b border-slate-100 pb-2 flex-shrink-0">
+          <div class="flex items-center gap-2">
+            <i data-lucide="bar-chart-horizontal" class="w-4 h-4 text-blue-900"></i>
+            <h4 class="text-xs font-black text-slate-900 uppercase tracking-wider">DESCRITIVO DOS EVENTOS (CLIQUE PARA FILTRAR/REMOVER)</h4>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="filtro-ativo-evento" class="text-[10px] text-blue-600 font-bold italic"></span>
+            <button onclick="alternarVisualizacao('eventos')" class="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-2 py-0.5 rounded border border-slate-300 transition-colors">Alternar Tabela</button>
+          </div>
+        </div>
+        <div id="view-chart-eventos" class="relative h-52 overflow-y-auto custom-scrollbar pr-1">
+          <div id="chartTopEventosWrapper" style="height: 100%; min-height: 190px;">
+            <canvas id="chartTopEventos"></canvas>
+          </div>
+        </div>
+        <div id="view-table-eventos" class="relative h-52 overflow-y-auto custom-scrollbar hidden">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-100 text-slate-700 sticky top-0">
+              <tr>
+                <th class="p-2">Curso / Evento</th>
+                <th class="p-2">Part.</th>
+                <th class="p-2">Facilitador</th>
+                <th class="p-2">Modelo</th>
+                <th class="p-2">Iniciativa</th>
+                <th class="p-2 text-right">%</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-eventos" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- GRÁFICOS 3 E 4 -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+      <!-- VOLUME MENSAL -->
+      <div class="lg:col-span-6 bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-2 border-b border-slate-100 pb-2">
+          <div class="flex items-center gap-2">
+            <i data-lucide="line-chart" class="w-4 h-4 text-blue-900"></i>
+            <h4 class="text-xs font-black text-slate-900 uppercase tracking-wider">VOLUME MENSAL</h4>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="filtro-ativo-mes" class="text-[10px] text-emerald-600 font-bold italic"></span>
+            <button onclick="alternarVisualizacao('volume')" class="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-2 py-0.5 rounded border border-slate-300 transition-colors">Alternar Tabela</button>
+          </div>
+        </div>
+        <div id="view-chart-volume" class="relative h-56"><canvas id="chartVolumeMensal"></canvas></div>
+        <div id="view-table-volume" class="relative h-56 overflow-y-auto custom-scrollbar hidden">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-100 text-slate-700 sticky top-0">
+              <tr>
+                <th class="p-2">Mês</th>
+                <th class="p-2 text-right">Participantes</th>
+                <th class="p-2">Secretaria Participante (Checkin)</th>
+                <th class="p-2 text-right">Eventos</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-volume" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- EIXOS DE APRENDIZAGEM -->
+      <div class="lg:col-span-6 bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-2 border-b border-slate-100 pb-2">
+          <div class="flex items-center gap-2">
+            <i data-lucide="donut" class="w-4 h-4 text-blue-900"></i>
+            <h4 class="text-xs font-black text-slate-900 uppercase tracking-wider">EIXOS DE APRENDIZAGEM</h4>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="filtro-ativo-eixo" class="text-[10px] text-purple-600 font-bold italic"></span>
+            <button onclick="alternarVisualizacao('eixos')" class="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-2 py-0.5 rounded border border-slate-300 transition-colors">Alternar Tabela</button>
+          </div>
+        </div>
+        <div id="view-chart-eixos" class="relative h-56 flex items-center justify-center"><canvas id="chartEixos"></canvas></div>
+        <div id="view-table-eixos" class="relative h-56 overflow-y-auto custom-scrollbar hidden">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-100 text-slate-700 sticky top-0">
+              <tr><th class="p-2">Eixo de Aprendizagem</th><th class="p-2 text-right">Participantes</th><th class="p-2 text-right">%</th></tr>
+            </thead>
+            <tbody id="tbody-eixos" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- DESTAQUES DO ANO 2025 -->
+    <section class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+      <div class="flex items-center gap-2.5 mb-3 border-b border-slate-100 pb-2">
+        <i data-lucide="star" class="w-7 h-7 text-blue-900 fill-blue-900"></i>
+        <h4 class="text-sm font-black text-slate-900 uppercase tracking-wider" id="titulo-destaques">DESTAQUES DO ANO 2025</h4>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- 1. SELO / MEDALHA VERDE -->
+        <div class="flex items-center gap-4 p-3 bg-slate-50/90 rounded-xl border border-slate-200 shadow-xs">
+          <div class="w-14 h-14 flex-shrink-0 flex items-center justify-center">
+            <svg class="w-12 h-12 text-emerald-500" viewBox="0 0 48 48" fill="none">
+              <circle cx="24" cy="20" r="14" fill="#10B981" stroke="#059669" stroke-width="2"/>
+              <circle cx="24" cy="20" r="10" stroke="#FFFFFF" stroke-width="2" stroke-dasharray="3 3"/>
+              <path d="M18 30L14 42L24 37L34 42L30 30" fill="#059669"/>
+            </svg>
+          </div>
+          <div>
+            <h5 class="text-sm font-extrabold text-slate-900">Secretaria de Educação</h5>
+            <p class="text-xs font-bold text-slate-900 mt-0.5 leading-tight">1.028+ Servidores Capacitados.</p>
+            <p class="text-[11px] font-semibold text-slate-800">Líder em desenvolvimento.</p>
+          </div>
+        </div>
+
+        <!-- 2. LIVRO / MANUAL AZUL DE ÉTICA -->
+        <div class="flex items-center gap-4 p-3 bg-slate-50/90 rounded-xl border border-slate-200 shadow-xs">
+          <div class="w-14 h-14 flex-shrink-0 flex items-center justify-center">
+            <svg class="w-12 h-12 text-blue-600" viewBox="0 0 48 48" fill="none">
+              <rect x="8" y="6" width="32" height="36" rx="4" fill="#2563EB"/>
+              <rect x="12" y="10" width="24" height="28" rx="2" fill="#FFFFFF"/>
+              <path d="M16 16H32M16 22H32M16 28H26" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round"/>
+              <path d="M8 38H40" stroke="#1D4ED8" stroke-width="3"/>
+            </svg>
+          </div>
+          <div>
+            <h5 class="text-sm font-extrabold text-slate-900">Curso do Código de Ética</h5>
+            <p class="text-xs font-bold text-slate-900 mt-0.5 leading-tight">600+ Servidores Certificados.</p>
+            <p class="text-[11px] font-semibold text-slate-800">Líder em certificações.</p>
+          </div>
+        </div>
+
+        <!-- 3. COMPUTADOR / EAD CIRCULAR -->
+        <div class="flex items-center gap-4 p-3 bg-slate-50/90 rounded-xl border border-slate-200 shadow-xs">
+          <div class="w-14 h-14 flex-shrink-0 flex items-center justify-center">
+            <svg class="w-12 h-12" viewBox="0 0 48 48" fill="none">
+              <circle cx="24" cy="24" r="20" fill="#ECFDF5" stroke="#10B981" stroke-width="2"/>
+              <rect x="14" y="14" width="20" height="13" rx="2" fill="#0B1E36" stroke="#10B981" stroke-width="1.5"/>
+              <path d="M11 31H37L34 27H14L11 31Z" fill="#10B981"/>
+              <path d="M18 18H24M18 21H30" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div>
+            <h5 class="text-sm font-extrabold text-slate-900">Plataforma EAD</h5>
+            <p class="text-xs font-bold text-slate-900 mt-0.5 leading-tight">600+ Servidores Capacitados.</p>
+            <p class="text-[11px] font-semibold text-slate-800">Líder em satisfação de aprendizagem.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    Chart.defaults.color = '#0f172a';
+    Chart.defaults.font.weight = 'bold';
+
+    const URL_CAPACITACOES = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSoGofxKO2DW2NfxFRXwL0HLrzG9TkgDJCG9HFiL6K37vIzBA38TO-QmaIvQxHa3i8ufzltzl5vOZ8e/pub?output=csv";
+    const URL_CHECKIN = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSpR_NRbGeZTRMXx0cEyc-GxMvDBJksKNAGGp4asnA1p2JE8sWhKFSDpppqZQUeJuBC5SbPcA-HR6mh/pub?output=csv";
+
+    let dadosBrutos = [];
+    let dadosCheckin = [];
+    let chartVinculo, chartTopEventos, chartVolumeMensal, chartEixos;
+    
+    let eixoSelecionadoGrafico = null;
+    let cursoSelecionadoGrafico = null;
+    let vinculoSelecionadoGrafico = null;
+    let mesSelecionadoGrafico = null;
+
+    const NOMES_MESES = ['jan.', 'fev.', 'mar.', 'abr.', 'mai.', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.'];
+
+    function normalizarChave(texto) {
+      if (!texto) return '';
+      return texto.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    }
+
+    function extrairCodigoEvento(texto) {
+      if (!texto) return '';
+      const matches = texto.toString().match(/\b[A-Z0-9]{5,20}\b/gi);
+      if (!matches) return '';
+      return matches[matches.length - 1].toUpperCase();
+    }
+
+    // FILTRA E RETORNA APENAS AS CATEGORIAS EXPLICITAMENTE PERMITIDAS
+    function padronizarSecretaria(nomeCompleto) {
+      if (!nomeCompleto) return null;
+      const norm = normalizarChave(nomeCompleto);
+
+      if (norm.includes('controladoria')) return 'Controladoria Geral do Município';
+      if (norm.includes('santa casa')) return 'Santa Casa';
+      if (norm.includes('camara')) return 'Câmara Municipal';
+      if (norm.includes('ilhabelaprev') || norm.includes('prev')) return 'IlhabelaPrev';
+      if (norm.includes('gabinete')) return 'Gabinete do Prefeito';
+      if (norm.includes('fundaci')) return 'FUNDACI';
+
+      // Apenas secretarias oficiais "de" ou "das"
+      if (norm.startsWith('secretaria') || norm.startsWith('sec') || norm.includes('educacao') || norm.includes('saude') || norm.includes('administracao') || norm.includes('financas') || norm.includes('fazenda') || norm.includes('esporte') || norm.includes('cultura') || norm.includes('obras') || norm.includes('habitacao') || norm.includes('governo') || norm.includes('meio ambiente') || norm.includes('juridicos') || norm.includes('desenvolvimento') || norm.includes('assistencia') || norm.includes('turismo') || norm.includes('transito') || norm.includes('seguranca') || norm.includes('obras') || norm.includes('servicos')) {
+        
+        let limpa = nomeCompleto.toString().trim()
+          .replace(/^Secretaria\s+Municipal\s+/i, '')
+          .replace(/^Secretaria\s+/i, '')
+          .replace(/^Sec\.\s+/i, '');
+        
+        let prefixo = norm.includes(' das ') ? 'Secretaria das' : 'Secretaria de';
+        let nucleo = limpa.replace(/^d[eoas]\s+/i, '').trim();
+        nucleo = nucleo.charAt(0).toUpperCase() + nucleo.slice(1);
+        
+        return `${prefixo} ${nucleo}`;
+      }
+
+      // Descarta qualquer outro lixo ou valor externo (ex: Policia, PM, Estagiários, etc.)
+      return null;
+    }
+
+    function extrairNucleoSecretaria(nomeCompleto) {
+      const padronizada = padronizarSecretaria(nomeCompleto);
+      if (!padronizada) return nomeCompleto;
+      return padronizada.replace(/^Secretaria\s+d[eoas]\s+/i, '');
+    }
+
+    const MAPA_CORES_NORMALIZADO = {
+      'iniciacao ao servico publico e valorizacao do servidor': '#7e22ce',
+      'eventos e campanhas': '#0b1e36',
+      'tecnologia': '#f59e0b',
+      'gestao e planejamento': '#10b981',
+      'legislacao e direito': '#ef4444',
+      'saude e bem-estar': '#3b82f6',
+      'outros': '#64748b'
+    };
+
+    const PALETA_FALLBACK = ['#f59e0b', '#7e22ce', '#0b1e36', '#10b981', '#ef4444', '#3b82f6'];
+
+    const pluginDoughnutLabels = {
+      id: 'pluginDoughnutLabels',
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        chart.getDatasetMeta(0).data.forEach((datapoint, index) => {
+          const { x, y } = datapoint.tooltipPosition();
+          const dataset = chart.data.datasets[0];
+          const total = dataset.data.reduce((acc, val) => acc + val, 0);
+          const currentValue = dataset.data[index];
+          
+          if (total > 0 && (currentValue / total) > 0.04) {
+            const percentage = ((currentValue / total) * 100).toFixed(1) + '%';
+            
+            ctx.save();
+            ctx.font = 'bold 11px Inter, sans-serif';
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(percentage, x, y);
+            ctx.restore();
+          }
+        });
+      }
+    };
+
+    const pluginBarLabels = {
+      id: 'pluginBarLabels',
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        chart.getDatasetMeta(0).data.forEach((bar, index) => {
+          const value = chart.data.datasets[0].data[index];
+          if (value !== undefined && value !== null && value > 0) {
+            ctx.save();
+            ctx.font = 'bold 11px Inter, sans-serif';
+            ctx.textBaseline = 'middle';
+            
+            const barWidth = bar.x - bar.base;
+            
+            if (barWidth > 35) {
+              ctx.fillStyle = '#ffffff';
+              ctx.textAlign = 'right';
+              ctx.fillText(value, bar.x - 8, bar.y);
+            } else {
+              ctx.fillStyle = '#0f172a';
+              ctx.textAlign = 'left';
+              ctx.fillText(value, bar.x + 6, bar.y);
+            }
+            
+            ctx.restore();
+          }
+        });
+      }
+    };
+
+    window.onload = function() {
+      if (window.lucide) lucide.createIcons();
+      carregarDadosPlanilhas();
+    };
+
+    function carregarDadosPlanilhas() {
+      const statusEl = document.getElementById('status-atualizacao');
+      if (typeof Papa !== 'undefined') {
+        const promiseCapacitacoes = new Promise((resolve) => {
+          Papa.parse(URL_CAPACITACOES, {
+            download: true,
+            header: true,
+            skipEmptyLines: true,
+            complete: res => resolve(res.data || [])
+          });
+        });
+
+        const promiseCheckin = new Promise((resolve) => {
+          Papa.parse(URL_CHECKIN, {
+            download: true,
+            header: true,
+            skipEmptyLines: true,
+            complete: res => resolve(res.data || [])
+          });
+        });
+
+        Promise.all([promiseCapacitacoes, promiseCheckin]).then(([cap, chk]) => {
+          dadosBrutos = cap;
+          dadosCheckin = chk;
+          if (statusEl) statusEl.innerText = "Conectado ao Sheets: " + new Date().toLocaleTimeString('pt-BR');
+          atualizarFiltroSecretarias();
+          atualizarFiltroCursos();
+          atualizarDashboard();
+        }).catch(err => {
+          console.error("Erro ao carregar dados:", err);
+          if (statusEl) statusEl.innerText = "Erro ao conectar ao Sheets";
+        });
+      }
+    }
+
+    function extrairAno(dataStr) {
+      if (!dataStr) return '';
+      const partes = dataStr.split('/');
+      if (partes.length >= 3) {
+        let ano = partes[2].trim().split(' ')[0];
+        if (ano.length === 2) ano = '20' + ano;
+        return ano;
+      }
+      return '';
+    }
+
+    function formatarMesAno(dataStr) {
+      if (!dataStr || !dataStr.includes('/')) return '';
+      const partes = dataStr.split('/');
+      if (partes.length >= 3) {
+        const idxMes = parseInt(partes[1], 10) - 1;
+        let ano = partes[2].trim().split(' ')[0];
+        if (ano.length === 2) ano = '20' + ano;
+        if (idxMes >= 0 && idxMes < 12) {
+          return `${NOMES_MESES[idxMes]} ${ano}`;
+        }
+      }
+      return '';
+    }
+
+    function obterPublicoAlvo(item) {
+      const chaves = Object.keys(item);
+      for (let chave of chaves) {
+        const norm = normalizarChave(chave);
+        if (norm.includes('publico') || norm.includes('vinculo') || norm === 'k') {
+          return (item[chave] || '').toString().trim();
+        }
+      }
+      return (item['Público alvo'] || item['Publico alvo'] || item['Vínculo'] || '').toString().trim();
+    }
+
+    function obterFacilitador(item) {
+      const chaves = Object.keys(item);
+      for (let chave of chaves) {
+        const norm = normalizarChave(chave);
+        if (norm.includes('facilitador') || norm.includes('instrutor') || norm.includes('palestrante')) {
+          return (item[chave] || '').toString().trim();
+        }
+      }
+      return item['Facilitador'] || item['Instrutor'] || '-';
+    }
+
+    function obterModelo(item) {
+      const chaves = Object.keys(item);
+      for (let chave of chaves) {
+        const norm = normalizarChave(chave);
+        if (norm.includes('modelo') || norm.includes('tipo') || norm.includes('modalidade')) {
+          return (item[chave] || '').toString().trim();
+        }
+      }
+      return item['Modelo'] || item['Tipo'] || 'Curso';
+    }
+
+    function obterIniciativa(item) {
+      const chaves = Object.keys(item);
+      for (let chave of chaves) {
+        const norm = normalizarChave(chave);
+        if (norm.includes('iniciativa') || norm.includes('secretaria')) {
+          const val = (item[chave] || '').toString().trim();
+          if (val) {
+            const pad = padronizarSecretaria(val);
+            if (pad) return pad;
+          }
+        }
+      }
+      return padronizarSecretaria(item['Iniciativa da '] || item['Secretarias Participantes'] || 'Secretaria de Administração');
+    }
+
+    function obterSecretariaCheckin(itemCheckin) {
+      const chaves = Object.keys(itemCheckin);
+      for (let chave of chaves) {
+        const norm = normalizarChave(chave);
+        if (norm === 'secretaria' || norm.includes('secretaria') || norm.includes('lotacao')) {
+          const val = (itemCheckin[chave] || '').toString().trim();
+          if (val) {
+            const pad = padronizarSecretaria(val);
+            if (pad) return pad;
+          }
+        }
+      }
+      if (chaves[4] && itemCheckin[chaves[4]]) {
+        const pad = padronizarSecretaria(itemCheckin[chaves[4]].toString().trim());
+        if (pad) return pad;
+      }
+      return padronizarSecretaria(itemCheckin['SECRETARIA'] || itemCheckin['Secretaria'] || '');
+    }
+
+    function obterDataCheckin(itemCheckin) {
+      const chaves = Object.keys(itemCheckin);
+      for (let chave of chaves) {
+        const norm = normalizarChave(chave);
+        if (norm.includes('carimbo') || norm.includes('data')) {
+          const val = (itemCheckin[chave] || '').toString().trim();
+          if (val) return val;
+        }
+      }
+      return itemCheckin['Carimbo de data/hora'] || itemCheckin['Data'] || '';
+    }
+
+    function obterCursoCheckin(itemCheckin) {
+      const chaves = Object.keys(itemCheckin);
+      for (let chave of chaves) {
+        const norm = normalizarChave(chave);
+        if (norm.includes('curso') || norm.includes('evento') || norm.includes('selecione')) {
+          const val = (itemCheckin[chave] || '').toString().trim();
+          if (val) return val;
+        }
+      }
+      return itemCheckin['SELECIONE ABAIXO SEU CURSO OU EVENTO'] || itemCheckin['Curso'] || '';
+    }
+
+    function formatarNomesSecretariasComQtd(mapaContagem) {
+      if (!mapaContagem || Object.keys(mapaContagem).length === 0) return '-';
+      
+      const entradas = Object.entries(mapaContagem).sort((a, b) => b[1] - a[1]);
+      let resultado = [];
+
+      entradas.forEach(([sec, qtd], idx) => {
+        let nucleo = extrairNucleoSecretaria(sec);
+        if (idx === 0) {
+          resultado.push(`(${qtd}) Secretaria de ${nucleo}`);
+        } else {
+          resultado.push(`(${qtd}) ${nucleo}`);
+        }
+      });
+
+      return resultado.join(', ');
+    }
+
+    function alternarVisualizacao(secao) {
+      const chartEl = document.getElementById(`view-chart-${secao}`);
+      const tableEl = document.getElementById(`view-table-${secao}`);
+      if (chartEl && tableEl) {
+        chartEl.classList.toggle('hidden');
+        tableEl.classList.toggle('hidden');
+      }
+    }
+
+    function atualizarFiltroSecretarias() {
+      const fAno = document.getElementById('filtro-ano').value;
+      const selSec = document.getElementById('filtro-secretaria');
+      let secretariaAtual = selSec.value;
+
+      const secretariasSet = new Set();
+      
+      dadosCheckin.forEach(item => {
+        const sec = obterSecretariaCheckin(item);
+        if (sec) secretariasSet.add(sec.trim());
+      });
+
+      dadosBrutos.forEach(item => {
+        const ano = extrairAno(item['Data inicio'] || item.Data);
+        const sec = item['Secretarias Participantes'] || item['Iniciativa da '] || item.Secretaria || '';
+        const condAno = (fAno === 'TODOS' || ano === fAno);
+        if (condAno && sec) {
+          sec.split(',').forEach(s => {
+            const pad = padronizarSecretaria(s.trim());
+            if (pad) secretariasSet.add(pad);
+          });
+        }
+      });
+
+      selSec.innerHTML = '<option value="TODOS">Todas</option>';
+      Array.from(secretariasSet).sort().forEach(sec => {
+        const opt = document.createElement('option');
+        opt.value = sec;
+        opt.textContent = sec;
+        selSec.appendChild(opt);
+      });
+
+      if (Array.from(secretariasSet).includes(secretariaAtual)) selSec.value = secretariaAtual;
+      else selSec.value = 'TODOS';
+    }
+
+    function atualizarFiltroCursos() {
+      const fAno = document.getElementById('filtro-ano').value;
+      const fSec = document.getElementById('filtro-secretaria').value;
+      const selCur = document.getElementById('filtro-curso');
+      let cursoAtual = selCur.value;
+
+      const cursosSet = new Set();
+      dadosBrutos.forEach(item => {
+        const ano = extrairAno(item['Data inicio'] || item.Data);
+        const sec = padronizarSecretaria(item['Secretarias Participantes'] || item['Iniciativa da '] || item.Secretaria || '');
+        const cur = item['Título'] || item.Curso || '';
+
+        const condAno = (fAno === 'TODOS' || ano === fAno);
+        const condSec = (fSec === 'TODOS' || (sec && sec.includes(fSec)));
+        if (condAno && condSec && cur) cursosSet.add(cur.trim());
+      });
+
+      selCur.innerHTML = '<option value="TODOS">Todos</option>';
+      Array.from(cursosSet).sort().forEach(cur => {
+        const opt = document.createElement('option');
+        opt.value = cur;
+        opt.textContent = cur;
+        selCur.appendChild(opt);
+      });
+
+      if (Array.from(cursosSet).includes(cursoAtual)) selCur.value = cursoAtual;
+      else selCur.value = 'TODOS';
+    }
+
+    function aoMudarFiltroAno() {
+      limparFiltroGraficos();
+      atualizarFiltroSecretarias();
+      atualizarFiltroCursos();
+      atualizarDashboard();
+    }
+
+    function aoMudarFiltroSecretaria() {
+      limparFiltroGraficos();
+      atualizarFiltroCursos();
+      atualizarDashboard();
+    }
+
+    function limparFiltroGraficos() {
+      eixoSelecionadoGrafico = null;
+      cursoSelecionadoGrafico = null;
+      vinculoSelecionadoGrafico = null;
+      mesSelecionadoGrafico = null;
+
+      document.getElementById('filtro-ativo-eixo').innerText = '';
+      document.getElementById('filtro-ativo-evento').innerText = '';
+      document.getElementById('filtro-ativo-vinculo').innerText = '';
+      document.getElementById('filtro-ativo-mes').innerText = '';
+      document.getElementById('filtro-curso').value = 'TODOS';
+      atualizarDashboard();
+    }
+
+    function atualizarDashboard() {
+      const fAno = document.getElementById('filtro-ano').value;
+      const fSec = document.getElementById('filtro-secretaria').value;
+      const fCur = document.getElementById('filtro-curso').value;
+
+      document.getElementById('subtitulo-topo').innerText = fSec === 'TODOS' ? 'Secretaria de Administração (Geral)' : fSec;
+      document.getElementById('titulo-destaques').innerText = 'DESTAQUES DO ANO 2025';
+
+      document.getElementById('filtro-ativo-eixo').innerText = eixoSelecionadoGrafico ? `[Eixo: ${eixoSelecionadoGrafico}]` : '';
+      document.getElementById('filtro-ativo-evento').innerText = cursoSelecionadoGrafico ? `[Curso: ${cursoSelecionadoGrafico}]` : '';
+      document.getElementById('filtro-ativo-vinculo').innerText = vinculoSelecionadoGrafico ? `[Vínculo: ${vinculoSelecionadoGrafico}]` : '';
+      document.getElementById('filtro-ativo-mes').innerText = mesSelecionadoGrafico ? `[Mês: ${mesSelecionadoGrafico}]` : '';
+
+      const cursoFiltroAtivo = cursoSelecionadoGrafico || (fCur !== 'TODOS' ? fCur : null);
+      const codigoFiltroAtivo = cursoFiltroAtivo ? extrairCodigoEvento(cursoFiltroAtivo) : '';
+
+      let filtrados = dadosBrutos.filter(item => {
+        const dataInicio = item['Data inicio'] || item.Data;
+        const ano = extrairAno(dataInicio);
+        const mesAnoStr = formatarMesAno(dataInicio);
+        const sec = padronizarSecretaria(item['Secretarias Participantes'] || item['Iniciativa da '] || item.Secretaria || '');
+        const cur = item['Título'] || item.Curso || '';
+        const eixo = item['Eixo Principal'] || item.Eixo || 'Outros';
+        const publicoAlvo = normalizarChave(obterPublicoAlvo(item));
+
+        const condAno = (fAno === 'TODOS' || ano === fAno);
+        const condSec = (fSec === 'TODOS' || (sec && sec.includes(fSec)));
+        const condCur = (fCur === 'TODOS' || cur.trim() === fCur.trim());
+        const condEixo = (!eixoSelecionadoGrafico || eixo.trim() === eixoSelecionadoGrafico.trim());
+        const condCursoClick = (!cursoSelecionadoGrafico || cur.trim() === cursoSelecionadoGrafico.trim());
+        const condMes = (!mesSelecionadoGrafico || mesAnoStr === mesSelecionadoGrafico);
+
+        let condVinculoClick = true;
+        if (vinculoSelecionadoGrafico) {
+          const vSelNorm = normalizarChave(vinculoSelecionadoGrafico);
+          if (vSelNorm.includes('efetivo')) {
+            condVinculoClick = publicoAlvo.includes('efetivo');
+          } else if (vSelNorm.includes('sos')) {
+            condVinculoClick = publicoAlvo.includes('sos');
+          } else if (vSelNorm.includes('estagiario')) {
+            condVinculoClick = publicoAlvo.includes('estagiario');
+          } else if (vSelNorm.includes('santa casa')) {
+            condVinculoClick = publicoAlvo.includes('santa casa');
+          }
+        }
+
+        return condAno && condSec && condCur && condEixo && condCursoClick && condMes && condVinculoClick;
+      });
+
+      let totalPart = 0;
+      let totalEv = filtrados.length;
+      let eixosMap = {};
+      let topEventosdetalhado = [];
+      let mesesMap = {};
+      let mesesSecretariasCheckinMap = {};
+      let vinculoMap = { 'Efetivo': 0, 'Sos': 0, 'Estagiário': 0, 'Santa casa': 0 };
+
+      dadosCheckin.forEach(chkItem => {
+        const dataChk = obterDataCheckin(chkItem);
+        const mesAnoChk = formatarMesAno(dataChk);
+        const anoChk = extrairAno(dataChk);
+        const secChk = obterSecretariaCheckin(chkItem);
+        const curChk = obterCursoCheckin(chkItem);
+
+        const condAnoChk = (fAno === 'TODOS' || anoChk === fAno);
+        const condSecChk = (fSec === 'TODOS' || (secChk && secChk.includes(fSec)));
+        
+        let condCurChk = true;
+        if (cursoFiltroAtivo) {
+          const codigoChk = extrairCodigoEvento(curChk);
+          
+          if (codigoFiltroAtivo && codigoChk && codigoFiltroAtivo === codigoChk) {
+            condCurChk = true;
+          } else {
+            const normAtivo = normalizarChave(cursoFiltroAtivo);
+            const normChk = normalizarChave(curChk);
+            const palavrasChaveAtivo = normAtivo.split(/[\s\-\:\.\,]+/).filter(p => p.length > 3 && !['curso', 'programa', 'oficina', 'treinamento', 'para', 'rede'].includes(p));
+            let batePalavras = palavrasChaveAtivo.length > 0 && palavrasChaveAtivo.some(p => normChk.includes(p));
+
+            condCurChk = normChk.includes(normAtivo) || normAtivo.includes(normChk) || batePalavras;
+          }
+        }
+
+        if (mesAnoChk && secChk && condAnoChk && condSecChk && condCurChk) {
+          if (!mesesSecretariasCheckinMap[mesAnoChk]) {
+            mesesSecretariasCheckinMap[mesAnoChk] = {};
+          }
+          const secNome = secChk.trim();
+          mesesSecretariasCheckinMap[mesAnoChk][secNome] = (mesesSecretariasCheckinMap[mesAnoChk][secNome] || 0) + 1;
+        }
+      });
+
+      filtrados.forEach(item => {
+        const qtd = parseInt(item['total de participantes'] || item['total de convocados'] || item.Participantes || 0) || 0;
+        totalPart += qtd;
+
+        const eixo = item['Eixo Principal'] || item.Eixo || 'Outros';
+        eixosMap[eixo] = (eixosMap[eixo] || 0) + qtd;
+
+        const cursoNome = item['Título'] || item.Curso || 'Outros';
+        const facilitador = obterFacilitador(item);
+        const modelo = obterModelo(item);
+        const iniciativa = obterIniciativa(item);
+        topEventosdetalhado.push({ nome: cursoNome, qtd: qtd, facilitador: facilitador, modelo: modelo, iniciativa: iniciativa });
+
+        const dataStr = item['Data inicio'] || item.Data || '';
+        const mesAnoFmt = formatarMesAno(dataStr);
+        if (mesAnoFmt) {
+          mesesMap[mesAnoFmt] = (mesesMap[mesAnoFmt] || 0) + qtd;
+        }
+
+        const pub = normalizarChave(obterPublicoAlvo(item));
+        if (pub.includes('efetivo')) {
+          vinculoMap['Efetivo'] += qtd;
+        } else if (pub.includes('sos')) {
+          vinculoMap['Sos'] += qtd;
+        } else if (pub.includes('estagiario')) {
+          vinculoMap['Estagiário'] += qtd;
+        } else if (pub.includes('santa casa')) {
+          vinculoMap['Santa casa'] += qtd;
+        } else {
+          vinculoMap['Efetivo'] += qtd;
+        }
+      });
+
+      document.getElementById('kpi-eventos').innerText = totalEv;
+      document.getElementById('kpi-participantes').innerText = totalPart;
+      document.getElementById('kpi-media-evento').innerText = totalEv > 0 ? (totalPart / totalEv).toFixed(2).replace('.', ',') : '0,00';
+      document.getElementById('kpi-media-mes').innerText = totalEv > 0 ? Math.max(1, Math.round(totalEv / (Object.keys(mesesMap).length || 1))) : 0;
+
+      let topEventosMap = {};
+      topEventosdetalhado.forEach(e => {
+        topEventosMap[e.nome] = (topEventosMap[e.nome] || 0) + e.qtd;
+      });
+
+      renderizarGraficoVinculo(vinculoMap);
+      renderizarGraficoTopEventos(topEventosMap);
+      renderizarGraficoVolumeMensal(mesesMap, filtrados);
+      renderizarGraficoEixos(eixosMap);
+      
+      preencherTabelasDescritivas(vinculoMap, topEventosdetalhado, mesesMap, eixosMap, totalPart, filtrados.length, mesesSecretariasCheckinMap);
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function preencherTabelasDescritivas(vinculoMap, eventosDetalhado, mesesMap, eixosMap, totalPart, totalEv, mesesSecretariasCheckinMap) {
+      const tbodyVinculo = document.getElementById('tbody-vinculo');
+      tbodyVinculo.innerHTML = '';
+      Object.keys(vinculoMap).forEach(k => {
+        const val = vinculoMap[k];
+        const pct = totalPart > 0 ? ((val / totalPart) * 100).toFixed(1) : '0.0';
+        tbodyVinculo.innerHTML += `<tr><td class="p-2 font-semibold">${k}</td><td class="p-2 text-right">${val}</td><td class="p-2 text-right">${pct}%</td></tr>`;
+      });
+
+      const tbodyEventos = document.getElementById('tbody-eventos');
+      tbodyEventos.innerHTML = '';
+      eventosDetalhado.sort((a, b) => b.qtd - a.qtd);
+      eventosDetalhado.forEach(e => {
+        const pct = totalPart > 0 ? ((e.qtd / totalPart) * 100).toFixed(2) + '%' : '0.00%';
+        tbodyEventos.innerHTML += `<tr>
+          <td class="p-2 font-semibold">${e.nome}</td>
+          <td class="p-2">${e.qtd}</td>
+          <td class="p-2 text-slate-600">${e.facilitador}</td>
+          <td class="p-2 text-slate-600">${e.modelo}</td>
+          <td class="p-2 text-slate-600">${e.iniciativa}</td>
+          <td class="p-2 text-right font-medium">${pct}</td>
+        </tr>`;
+      });
+
+      const tbodyVolume = document.getElementById('tbody-volume');
+      tbodyVolume.innerHTML = '';
+      let mesesOrd = Object.keys(mesesMap).sort((a, b) => {
+        const pA = a.split(' '); const pB = b.split(' ');
+        if (pA[1] !== pB[1]) return (pA[1] || '').localeCompare(pB[1] || '');
+        return NOMES_MESES.indexOf(pA[0]) - NOMES_MESES.indexOf(pB[0]);
+      });
+      mesesOrd.forEach(m => {
+        const secTexto = formatarNomesSecretariasComQtd(mesesSecretariasCheckinMap[m]);
+        tbodyVolume.innerHTML += `<tr>
+          <td class="p-2 font-semibold">${m}</td>
+          <td class="p-2 text-right font-bold">${mesesMap[m]}</td>
+          <td class="p-2 text-slate-700 font-medium">${secTexto}</td>
+          <td class="p-2 text-right">${Math.max(1, Math.round(totalEv / (mesesOrd.length || 1)))}</td>
+        </tr>`;
+      });
+
+      const tbodyEixos = document.getElementById('tbody-eixos');
+      tbodyEixos.innerHTML = '';
+      let paresEixos = Object.keys(eixosMap).map(k => ({ nome: k, qtd: eixosMap[k] })).sort((a,b) => b.qtd - a.qtd);
+      paresEixos.forEach(p => {
+        const pctEixo = totalPart > 0 ? ((p.qtd / totalPart) * 100).toFixed(1) : '0.0';
+        tbodyEixos.innerHTML += `<tr><td class="p-2 font-semibold">${p.nome}</td><td class="p-2 text-right">${p.qtd}</td><td class="p-2 text-right">${pctEixo}%</td></tr>`;
+      });
+    }
+
+    function renderizarGraficoVinculo(mapaVinculo) {
+      const ctx = document.getElementById('chartVinculo');
+      if (!ctx) return;
+      if (chartVinculo) chartVinculo.destroy();
+
+      const chaves = Object.keys(mapaVinculo);
+      const valores = Object.values(mapaVinculo);
+
+      chartVinculo = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: chaves,
+          datasets: [{
+            data: valores,
+            backgroundColor: ['#0b1e36', '#f59e0b', '#10b981', '#3b82f6'],
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '62%',
+          plugins: {
+            legend: { position: 'right', labels: { color: '#0f172a', font: { weight: 'bold' } } }
+          },
+          onClick: (event, elements, chart) => {
+            let index = -1;
+            if (elements.length > 0) {
+              index = elements[0].index;
+            } else {
+              const activePoint = chart.getElementsAtEventForMode(event, 'nearest', { intersect: false }, true);
+              if (activePoint.length > 0) index = activePoint[0].index;
+            }
+            if (index !== -1) {
+              const vinculoClicado = chaves[index];
+              vinculoSelecionadoGrafico = (vinculoSelecionadoGrafico === vinculoClicado) ? null : vinculoClicado;
+              atualizarDashboard();
+            }
+          }
+        },
+        plugins: [pluginDoughnutLabels]
+      });
+    }
+
+    function renderizarGraficoTopEventos(mapa) {
+      const ctx = document.getElementById('chartTopEventos');
+      if (!ctx) return;
+      if (chartTopEventos) chartTopEventos.destroy();
+
+      let pares = Object.keys(mapa).map(key => ({ nome: key, qtd: mapa[key] }));
+      pares.sort((a, b) => b.qtd - a.qtd);
+
+      let labels = pares.map(p => p.nome);
+      let data = pares.map(p => p.qtd);
+
+      if (labels.length === 0) {
+        labels = ['Nenhum evento'];
+        data = [0];
+      }
+
+      const alturaCalculada = Math.max(190, labels.length * 36);
+      document.getElementById('chartTopEventosWrapper').style.height = alturaCalculada + 'px';
+
+      chartTopEventos = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Participantes',
+            data: data,
+            backgroundColor: labels.map(l => l === cursoSelecionadoGrafico ? '#3b82f6' : '#0b1e36'),
+            borderRadius: 3
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { 
+              ticks: { color: '#0f172a', font: { weight: 'bold' } } 
+            },
+            y: { ticks: { color: '#0f172a', font: { weight: 'bold' } } }
+          },
+          plugins: { legend: { display: false } },
+          onClick: (event, elements) => {
+            if (elements.length > 0) {
+              const index = elements[0].index;
+              const cursoClicado = labels[index];
+              if (cursoSelecionadoGrafico === cursoClicado) {
+                cursoSelecionadoGrafico = null;
+                document.getElementById('filtro-curso').value = 'TODOS';
+              } else {
+                cursoSelecionadoGrafico = cursoClicado;
+                document.getElementById('filtro-curso').value = cursoSelecionadoGrafico;
+              }
+              atualizarDashboard();
+            }
+          }
+        },
+        plugins: [pluginBarLabels]
+      });
+    }
+
+    function renderizarGraficoVolumeMensal(mesesMap, filtrados) {
+      const ctx = document.getElementById('chartVolumeMensal');
+      if (!ctx) return;
+      if (chartVolumeMensal) chartVolumeMensal.destroy();
+
+      let mesesOrdenados = Object.keys(mesesMap).sort((a, b) => {
+        const pA = a.split(' '); const pB = b.split(' ');
+        const anoA = pA[1] || ''; const anoB = pB[1] || '';
+        if (anoA !== anoB) return anoA.localeCompare(anoB);
+        return NOMES_MESES.indexOf(pA[0]) - NOMES_MESES.indexOf(pB[0]);
+      });
+
+      if (mesesOrdenados.length === 0) {
+        const ano = document.getElementById('filtro-ano').value;
+        const anoSufixo = ano === 'TODOS' ? '2026' : ano;
+        mesesOrdenados = [`jan. ${anoSufixo}`, `fev. ${anoSufixo}`, `mar. ${anoSufixo}`, `abr. ${anoSufixo}`, `mai. ${anoSufixo}`];
+      }
+
+      let dadosPart = mesesOrdenados.map(m => mesesMap[m] || 0);
+
+      chartVolumeMensal = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: mesesOrdenados,
+          datasets: [
+            {
+              label: 'Participantes',
+              data: dadosPart,
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.12)',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 6,
+              pointHoverRadius: 9,
+              pointBackgroundColor: mesesOrdenados.map(m => m === mesSelecionadoGrafico ? '#3b82f6' : '#10b981')
+            },
+            {
+              label: 'Eventos',
+              data: mesesOrdenados.map(() => Math.max(1, Math.round(filtrados.length / (mesesOrdenados.length || 1)))),
+              borderColor: '#0b1e36',
+              tension: 0.3,
+              borderDash: [4, 4],
+              pointRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { ticks: { color: '#0f172a', font: { weight: 'bold' } } },
+            y: { ticks: { color: '#0f172a', font: { weight: 'bold' } } }
+          },
+          plugins: {
+            legend: { labels: { color: '#0f172a', font: { weight: 'bold' } } }
+          },
+          onClick: (event, elements, chart) => {
+            let index = -1;
+            if (elements.length > 0) {
+              index = elements[0].index;
+            } else {
+              const activePoint = chart.getElementsAtEventForMode(event, 'nearest', { intersect: false }, true);
+              if (activePoint.length > 0) index = activePoint[0].index;
+            }
+            if (index !== -1) {
+              const mesClicado = mesesOrdenados[index];
+              if (mesSelecionadoGrafico === mesClicado) {
+                mesSelecionadoGrafico = null;
+              } else {
+                mesSelecionadoGrafico = mesClicado;
+              }
+              atualizarDashboard();
+            }
+          }
+        }
+      });
+    }
+
+    function renderizarGraficoEixos(mapa) {
+      const ctx = document.getElementById('chartEixos');
+      if (!ctx) return;
+      if (chartEixos) chartEixos.destroy();
+
+      let labelsOriginais = Object.keys(mapa);
+      let data = Object.values(mapa);
+
+      if (labelsOriginais.length === 0) {
+        labelsOriginais = ['Sem dados'];
+        data = [100];
+      }
+
+      const coresFinais = labelsOriginais.map((l, idx) => {
+        const chaveNorm = normalizarChave(l);
+        return MAPA_CORES_NORMALIZADO[chaveNorm] || PALETA_FALLBACK[idx % PALETA_FALLBACK.length];
+      });
+
+      chartEixos = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labelsOriginais,
+          datasets: [{
+            data: data,
+            backgroundColor: coresFinais,
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '60%',
+          plugins: {
+            legend: { position: 'right', labels: { color: '#0f172a', font: { weight: 'bold' } } }
+          },
+          onClick: (event, elements, chart) => {
+            let index = -1;
+            if (elements.length > 0) {
+              index = elements[0].index;
+            } else {
+              const activePoint = chart.getElementsAtEventForMode(event, 'nearest', { intersect: false }, true);
+              if (activePoint.length > 0) index = activePoint[0].index;
+            }
+            if (index !== -1 && labelsOriginais[index] !== 'Sem dados') {
+              const eixoClicado = labelsOriginais[index];
+              eixoSelecionadoGrafico = (eixoSelecionadoGrafico === eixoClicado) ? null : eixoClicado;
+              atualizarDashboard();
+            }
+          }
+        },
+        plugins: [pluginDoughnutLabels]
+      });
+    }
+  </script>
+</body>
+</html>
